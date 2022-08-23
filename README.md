@@ -7,13 +7,17 @@ Telegram botfor short finance
 This is a functioning proof-of-concept project with known bugs. Feel free to fork, share and drop me a line.
 
 ## Features
-* Run all your bots in the cloud while you sleep. Support for Docker Compose
+* Price alerts notifications for any cryptocurrency present on CoinGecko api
+* New pool,proposals,auction notifications on Shorter Finance
+* Pools expiration notifications on Shorter Finance (presets: 3 days, 1 day, 12 hours, 6 hours, 3 hours, 1 hours, 15 minutes)
+* Run bot in the cloud while you sleep. Support for Docker Compose
 
 ## Requirements
 ### OS / Infrastructure
 * Python 3+
 * Docker (optional)
 * Telegram (Desktop, Web or Mobile download: https://www.telegram.org/)
+* MongoDB
 
 ## Quick Start
 
