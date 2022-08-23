@@ -24,7 +24,8 @@ This is a functioning proof-of-concept project with known bugs. Feel free to for
 ### Setup your ENV vars
 Edit the file sample.env which contains all the required environmental variables for bot
 
-* Replace W3_NODE_URL, TELEGRAM_API_ID, TELEGRAM_API_HASH, TELEGRAM_BOT_TOKEN
+* Replace W3_NODE_URL,free rpc nodes on https://www.alchemy.com/ or https://infura.io/
+* TELEGRAM_API_ID, TELEGRAM_API_HASH, TELEGRAM_BOT_TOKEN
 * Rename sample.env to .env 'mv sample.env .env'
 
 ### Running Docker Compose
