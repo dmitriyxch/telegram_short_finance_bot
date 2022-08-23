@@ -30,9 +30,9 @@ Edit the file sample.env which contains all the required environmental variables
 
 ### Running Docker Compose
 
-* running 'docker-compose up -d' to build the Docker containers which include the Mongo database r:
+* running 'sudo docker-compose up -d' to build the Docker containers which include the Mongo database r:
 
-* 'docker-compose down' to stop the containers
+* 'sudo docker-compose down' to stop the containers
 
 Before you were required to run your own Mongo instance and this created some issues with connection string compatability and versioning. In this update, it is just created for you and persisted on disk.
 
