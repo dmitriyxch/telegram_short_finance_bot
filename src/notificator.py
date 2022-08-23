@@ -9,7 +9,7 @@ import os
 import price
 from pathlib import Path
 
-env_file = '.env' if os.path.isfile('.env') else '../.env'
+env_file = '.env' if os.path.isfile('.env') else 'bot.env'
 logger.info(f'env_file: {env_file}')
 dotenv_path = Path(env_file)
 load_dotenv(dotenv_path=dotenv_path)
