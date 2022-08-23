@@ -37,6 +37,9 @@ Before you were required to run your own Mongo instance and this created some is
 
 Additionally Dozzle is provided so that you may view logs in your browser, simply go to http://localhost:9999 and click on the `app_bot` container.
 
+### Notes
+
+MongoDB save data by path ~/docker/mongo
 
 ### Telethon SDK
 The bot is built on top of the Telethon Python SDK (https://docs.telethon.dev/en/latest/)
