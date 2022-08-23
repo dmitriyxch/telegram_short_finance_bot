@@ -1,0 +1,7 @@
+telethon
+pycoingecko
+loguru
+pymongo
+python-dotenv
+asyncio
+web3
