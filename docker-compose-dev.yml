@@ -12,6 +12,9 @@ services:
       MONGO_INITDB_ROOT_PASSWORD: changeme
 
   app_bot:
+    env_file:
+      - .env
+    
     build: .
     container_name: app_bot
     volumes:

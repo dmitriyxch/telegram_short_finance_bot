@@ -12,7 +12,11 @@ services:
       MONGO_INITDB_ROOT_PASSWORD: changeme
 
   app_bot:
+    env_file:
+      - .env
+    
     build: .
+    #command: /bin/bash -c "sleep 15; python3 bot.py"
     container_name: app_bot
     volumes:
       - src/:/usr/local/src
