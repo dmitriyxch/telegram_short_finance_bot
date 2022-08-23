@@ -3,7 +3,6 @@ RUN apk add --no-cache gcc musl-dev
 RUN apk update && apk upgrade && \
     apk add git alpine-sdk bash python3
 COPY src/ /usr/local/src
-COPY .env /usr/local/src/
 WORKDIR /usr/local/src
 RUN pip3 install -r requirements.txt
 
