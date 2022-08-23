@@ -4,6 +4,7 @@ RUN apk update && apk upgrade && \
     apk add git alpine-sdk bash python3
 COPY src/ /usr/local/src
 WORKDIR /usr/local/src
+RUN mkdir -p /usr/local/src/sessions
 RUN pip3 install -r requirements.txt
 
 #run cron for price alerts
