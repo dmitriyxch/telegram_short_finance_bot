@@ -1,5 +1,5 @@
 import asyncio
-from telethon import TelegramClient
+from telethon import TelegramClient, types
 import pymongo
 from pathlib import Path
 from loguru import logger
@@ -25,6 +25,7 @@ class Notificator:
         self.token_alerts_collection = self.db["token_alerts"]
         self.proposal_collection = self.db["proposal_alerts"]
         self.pool_collection = self.db["pool_alerts"]
+        self.profiles = self.db["profiles"]
         self.expiration_collection = self.db["expiration_alerts"]
 
         self.get_price = price.Price(
@@ -51,14 +52,27 @@ class Notificator:
             percent = round(diff/(alert["last_price"]/100), 2)
 
             if abs(percent) > abs(alert["change_percent"]):
-                logger.debug(alert["change_percent"])
+                logger.debug(percent)
                 setting = self.users_collection.find_one(
                     {"id": alert["user_id"]})
                 if percent > 0:
                     icon = '🚀'
                 else:
                     icon = '🔻️'
-                await self.tg_client.send_message(setting["id"], f"{icon} <a href ='https://www.coingecko.com/en/coins/{token['id']}'>{token['symbol'].upper()}</a> price changed {percent}%! Current price ${token['current_price']}", parse_mode="html", link_preview=False)
+                
+                groups = list(self.profiles.find({"user_id":setting["id"], "notifications":True}))
+                if len(groups):
+                    for group in groups:
+                        
+                        ent = group["id"]
+                        if group["_"] == 'Channel':
+                            ent = types.PeerChannel(group["id"])
+                        elif group["_"] == 'Chat':
+                            ent = types.PeerChat(group["id"])
+                            
+                        await self.tg_client.send_message(ent, f"{icon} <a href ='https://www.coingecko.com/en/coins/{token['id']}'>{token['symbol'].upper()}</a> price changed {percent}%! Current price ${token['current_price']}", parse_mode="html", link_preview=False)
+                else:
+                    await self.tg_client.send_message(setting["id"], f"{icon} <a href ='https://www.coingecko.com/en/coins/{token['id']}'>{token['symbol'].upper()}</a> price changed {percent}%! Current price ${token['current_price']}", parse_mode="html", link_preview=False)
                 self.token_alerts_collection.find_one_and_update({"token_id": alert["token_id"], "user_id": alert["user_id"]}, {
                                                                  "$set": {"last_price": token['current_price'], "last_update": datetime.datetime.utcnow().isoformat()}})
 

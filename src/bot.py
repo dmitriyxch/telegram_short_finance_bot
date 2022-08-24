@@ -1,5 +1,7 @@
 import asyncio
-from telethon import TelegramClient, events, Button
+from telethon import TelegramClient, events, Button, types 
+
+
 import pymongo
 from pathlib import Path
 from loguru import logger
@@ -24,6 +26,7 @@ class TGmainbot:
         self.token_alerts_collection = self.db["token_alerts"]
         self.proposal_collection = self.db["proposal_alerts"]
         self.pool_collection = self.db["pool_alerts"]
+        self.profiles = self.db["profiles"]
         self.auction_collection = self.db["auction_alerts"]
         self.expiration_collection = self.db["expiration_alerts"]
 
@@ -37,6 +40,8 @@ class TGmainbot:
         # tg events setup
         self.tg_client = tg_client
         self.tg_client.add_event_handler(
+            self.chat_handler, events.ChatAction())
+        self.tg_client.add_event_handler(
             self.handler, events.NewMessage(pattern='/start'))
         self.tg_client.add_event_handler(self.callback, events.CallbackQuery)
         self.tg_client.add_event_handler(
@@ -47,6 +52,8 @@ class TGmainbot:
             self.pool_alert, events.NewMessage(pattern='.{2}New Pool Alerts'))
         self.tg_client.add_event_handler(
             self.auction_alert, events.NewMessage(pattern='.{2}New Auction Alerts'))
+        self.tg_client.add_event_handler(
+            self.profile_settings, events.NewMessage(pattern='Profile'))
         self.tg_client.add_event_handler(
             self.pool_exp_alert, events.NewMessage(pattern='.{2}Pool Expiration Alerts'))
         self.tg_client.add_event_handler(
@@ -107,7 +114,6 @@ class TGmainbot:
                     for coin in self.token_alerts_collection.find({"user_id":user.id}):
                         coin = self.get_price.get_token(coin["token_id"])
                         message += f'{coin["symbol"].upper()} is ${coin["current_price"]} /edit_c_{coin["id"].replace("-", "_")}\n'
-                    
                     await conv.send_message(message)
                     
             elif 'delete_c_' in str(event.data):
@@ -116,6 +122,16 @@ class TGmainbot:
                 async with self.tg_client.conversation(event.chat_id) as conv:
                     self.token_alerts_collection.delete_one({"user_id": user.id, "token_id": token_id.replace("_", "-")})
                     await conv.send_message(f'{coin["name"]} has been successfully removed from your watchlist')
+                    
+            elif 'group_set_' in str(event.data):
+                group_id = int(str(event.data).split("'")[1].replace('group_set_', '').replace('_', '-'))
+                group = self.profiles.find_one({"id":group_id, "user_id":user.id})
+                status = False if group["notifications"] == True else True
+                on = "Off" if group['notifications'] else "On"
+                self.profiles.find_one_and_update({"id":group_id, "user_id":user.id}, {"$set":{"notifications":status}})
+                
+                async with self.tg_client.conversation(event.chat_id) as conv:
+                    await conv.send_message(f'{group["title"]} set status notification to {on}')
                         
             
                     
@@ -335,27 +351,56 @@ class TGmainbot:
             ]
         ]
         await self.tg_client.send_message(event.chat_id, "Choose an option:", buttons=keyboard)
+        
+        
+    
+    async def profile_settings(self, event):
+        user = await event.get_sender()
+        groups = self.profiles.find({"user_id":user.id})
+        keyboard = []
+        
+        for group in groups:
+            status = "On" if group['notifications'] else "Off"
+            keyboard.append([Button.inline(f'{group["title"]}:{status}', f'group_set_{group["id"]}')])
+        
+        keyboard.append([Button.url("Click here to add to a group", url='https://telegram.me/@shfinancebot?startgroup=true')])
+        await self.tg_client.send_message(event.chat_id, "Set Group`s and Channel`s notifications:", buttons=keyboard)
 
+    async def chat_handler(self, event):
+        logger.debug(event)
+        
     async def handler(self, event):
         user = await event.get_sender()
-        user_dict = user.to_dict()
-        user_dict["chat_id"] = event.chat_id
-        self.users_collection.find_one_and_update(
-            {"id": user.id}, {'$set': user_dict }, upsert=True)
-        keyboard = [
-            [
-                Button.text("🚀 Price Alerts"),
-                Button.text("📣 New Proposal Alerts",),
-                Button.text("📢 New Pool Alerts"),
-                
-            ],
-            {
-                Button.text("💸 New Auction Alerts"),
-                Button.text("🚨 Pool Expiration Alerts")
-            }
-        ]
+        if type(event.message.peer_id) == types.PeerUser:
+            user_dict = user.to_dict()
+            user_dict["chat_id"] = event.chat_id
+            self.users_collection.find_one_and_update(
+                {"id": user.id}, {'$set': user_dict }, upsert=True)
+            keyboard = [
+                [
+                    Button.text("🚀 Price Alerts"),
+                    Button.text("📣 New Proposal Alerts",),
+                    Button.text("📢 New Pool Alerts"),
+                    
+                ],
+                {
+                    Button.text("💸 New Auction Alerts"),
+                    Button.text("🚨 Pool Expiration Alerts"),
+                    Button.text("Profile")
+                }
+            ]
 
-        await self.tg_client.send_message(event.chat_id, f"🤖 Hey hey, {user.first_name} , welcome on board!", buttons=keyboard)
+            await self.tg_client.send_message(event.chat_id, f"🤖 Hey hey, {user.first_name} , welcome on board!", buttons=keyboard)
+        else:
+            
+            permissions = await self.tg_client.get_permissions(event.chat_id, user.id)
+            if permissions.is_admin:
+                group = await self.tg_client.get_entity(event.message.peer_id)
+                group = group.to_dict()
+                group["user_id"] = user.id
+                group["notifications"] = True
+                self.profiles.find_one_and_replace({"user_id":user.id,"id":group["id"]},group,upsert=True)
+                await self.tg_client.send_message(event.chat_id, f"✅ ShortFinance bot has been successfully added!\n❗️To activate, open the bot, Main Menu➼Profiles➼ Open a Profile that you wish to use for that group➼Select ON near the group's name")
 
 
 if __name__ == '__main__':

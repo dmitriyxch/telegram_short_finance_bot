@@ -4,25 +4,14 @@ services:
 
   mongo:
     image: mongo
+    ports:
+      - 27017:27017
     restart: always
     volumes:
       - ~/docker/mongo:/data/db
     environment:
       MONGO_INITDB_ROOT_USERNAME: root
       MONGO_INITDB_ROOT_PASSWORD: changeme
-
-  app_bot:
-    env_file:
-      - .env
-    
-    build: .
-    container_name: app_bot
-    volumes:
-      - src:/usr/local/src
-    depends_on:
-      - mongo
-    links:
-      - mongo
 
   # ===============
   # Mongo Express service

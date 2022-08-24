@@ -1,5 +1,5 @@
 import asyncio
-from telethon import TelegramClient
+from telethon import TelegramClient, types
 import pymongo
 from pathlib import Path
 from loguru import logger
@@ -29,6 +29,7 @@ class EventsChecker:
         self.auction_collection = self.db["auction_alerts"]
         self.expiration_collection = self.db["expiration_alerts"]
         self.notifications_collection = self.db["notifications"]
+        self.profiles = self.db["profiles"]
         self.tg_client = tg_client
 
         self.w3 = web3.Web3(web3.HTTPProvider(node_url))
@@ -47,8 +48,23 @@ class EventsChecker:
             await self.check_new_auction()
             await self.check_new_pool()
             logger.debug('cycle')
-            time.sleep(1)
+            time.sleep(5)
     
+    async def send_entity_message(self,entity_id, message, parse_mode="html", link_preview=False):
+        groups = list(self.profiles.find({"user_id":entity_id, "notifications":True}))
+        if len(groups):
+            for group in groups:
+                ent = group["id"]
+                if group["_"] == 'Channel':
+                    ent = types.PeerChannel(group["id"])
+                elif group["_"] == 'Chat':
+                    ent = types.PeerChat(group["id"])
+                    
+                await self.tg_client.send_message(ent,message,parse_mode = parse_mode,link_preview = link_preview)
+        else:
+            await self.tg_client.send_message(ent,message,parse_mode = parse_mode,link_preview = link_preview)
+    
+    #work well, get only closest 1 pool to expiration
     async def check_new_expiration(self):
         pool = self.contract_str_pool.functions.getInfo().call()
         if len(pool):
@@ -60,11 +76,11 @@ class EventsChecker:
                 if seconds <= int(alert["pool_alert"]):
                     if self.notifications_collection.count_documents({"type":"check_new_expiration", "id" : pool[8]}) == 0: #check if we sent notification
                         logger.debug(alert)
-                        await self.tg_client.send_message(alert["user_id"], f"Poll expires soon <a href='https://app.shorter.finance/pools/{pool[8]}'>{pool[8]}</a>", parse_mode="html", link_preview=False)
+                        await self.send_entity_message(alert["user_id"], f"Poll expires soon <a href='https://app.shorter.finance/pools/{pool[8]}'>{pool[8]}</a>", parse_mode="html", link_preview=False)
                         self.notifications_collection.insert_one({"type":"check_new_expiration", "id" : pool[8]})
                     
 
-
+    #work well
     async def check_new_proposal(self):
         transferEvents = self.contract_proposal.events.PoolProposalCreated.createFilter(
             fromBlock=self.w3.eth.blockNumber, toBlock=self.w3.eth.blockNumber)
@@ -77,9 +93,11 @@ class EventsChecker:
                     if alert["proposal_alert"] == True:
                         if self.notifications_collection.count_documents({"type":"check_new_proposal", "id" : tr_event['args']['proposalId']}) == 0: #check if we sent alert
                             logger.debug(alert)
-                            await self.tg_client.send_message(alert["user_id"], f"New Proposal was created <a href='https://app.shorter.finance/governance/proposals/{tr_event['args']['proposalId']}'>{tr_event['args']['proposalId']}</a>", parse_mode="html", link_preview=False)
+                            await self.send_entity_message(alert["user_id"], f"New Proposal was created <a href='https://app.shorter.finance/governance/proposals/{tr_event['args']['proposalId']}'>{tr_event['args']['proposalId']}</a>", parse_mode="html", link_preview=False)
                             self.notifications_collection.insert_one({"type":"check_new_proposal", "id" : tr_event['args']['proposalId']})
                             
+    
+    #works well
     async def check_new_auction(self):
         transferEvents = self.contract_auction.events.AuctionInitiated.createFilter(
             fromBlock=self.w3.eth.blockNumber, toBlock=self.w3.eth.blockNumber)
@@ -93,23 +111,26 @@ class EventsChecker:
                     if alert["proposal_alert"] == True:
                         if self.notifications_collection.count_documents({"type":"check_new_auction", "id" : tr_event['args']['positionAddr']}) == 0: #check if we sent alert
                             logger.debug(alert)
-                            await self.tg_client.send_message(alert["user_id"], f"New Auction was started <a href='https://app.shorter.finance/liquidations/{tr_event['args']['positionAddr']}'>{tr_event['args']['positionAddr']}</a>", parse_mode="html", link_preview=False)
+                            await self.send_entity_message(alert["user_id"], f"New Auction was started <a href='https://app.shorter.finance/liquidations/{tr_event['args']['positionAddr']}'>{tr_event['args']['positionAddr']}</a>", parse_mode="html", link_preview=False)
                             self.notifications_collection.insert_one({"type":"check_new_auction", "id" : tr_event['args']['positionAddr']})
 
+    #works well
     async def check_new_pool(self):
-        transferEvents = self.contract_str_pool.events.PoolActivated.createFilter(
+        transferEvents = self.contract_proposal.events.ProposalStatusChanged.createFilter(
             fromBlock=self.w3.eth.blockNumber, toBlock=self.w3.eth.blockNumber)
         entries = transferEvents.get_all_entries()
+                
         if len(entries):
-            all_alerts = list(self.pool_collection.find({}))
             #print(list(entries))
             for tr_event in entries:
-                for alert in all_alerts:
-                    if alert["pool_alert"] == True:
-                        if self.notifications_collection.count_documents({"type":"check_new_pool", "id" : tr_event['args']['poolId']}) == 0: #check if we sent alert
-                            logger.debug(alert)
-                            await self.tg_client.send_message(alert["user_id"], f"New Pool was created <a href='https://app.shorter.finance/pools/{tr_event['args']['poolId']}'>{tr_event['args']['poolId']}</a>", parse_mode="html", link_preview=False)
-                            self.notifications_collection.insert_one({"type":"check_new_pool", "id" : tr_event['args']['poolId']}) 
+                if tr_event["args"]["ps"] == 4:
+                    all_alerts = list(self.pool_collection.find({}))
+                    for alert in all_alerts:
+                        if alert["pool_alert"] == True:
+                            if self.notifications_collection.count_documents({"type":"check_new_pool", "id" : tr_event['args']['proposalId']}) == 0: #check if we sent alert
+                                logger.debug(alert)
+                                await self.send_entity_message(alert["user_id"], f"New Pool was created <a href='https://app.shorter.finance/pools/{tr_event['args']['proposalId']}'>{tr_event['args']['proposalId']}</a>", parse_mode="html", link_preview=False)
+                                self.notifications_collection.insert_one({"type":"check_new_pool", "id" : tr_event['args']['proposalId']}) 
 
 
 if __name__ == '__main__':
