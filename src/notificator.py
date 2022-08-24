@@ -51,7 +51,7 @@ class Notificator:
             diff = token['current_price'] - alert["last_price"]
             percent = round(diff/(alert["last_price"]/100), 2)
 
-            if abs(percent) > abs(alert["change_percent"]):
+            if abs(percent) >= abs(alert["change_percent"]):
                 logger.debug(percent)
                 setting = self.users_collection.find_one(
                     {"id": alert["user_id"]})
