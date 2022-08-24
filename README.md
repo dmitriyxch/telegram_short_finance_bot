@@ -44,9 +44,14 @@ MongoDB saves data by path ~/docker/mongo
 
 How bot works demo https://youtu.be/h2f-1uD64AE
 
-How to add bot in groups https://youtu.be/UIsF8ki4ewM
-
 Demo bot address https://t.me/shfinancebot
+
+How to add bot to the group https://www.youtube.com/watch?v=UIsF8ki4ewM
+
+Manage notifications in chats in Profile menu (Default On)
+On - bot sends notifications to the groups
+Off -  bot sends notifications to private chat
+
 
 ### Telethon SDK
 The bot is built on top of the Telethon Python SDK (https://docs.telethon.dev/en/latest/)
