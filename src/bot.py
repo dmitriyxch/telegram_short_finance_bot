@@ -10,7 +10,7 @@ from dotenv import load_dotenv
 import os
 import price
 
-env_file = '.env' if os.path.isfile('.env') else 'bot.env'
+env_file = '../.env' if os.path.isfile('../.env') else 'bot.env'
 logger.info(f'env_file: {env_file}')
 dotenv_path = Path(env_file)
 load_dotenv(dotenv_path=dotenv_path)
@@ -363,7 +363,8 @@ class TGmainbot:
             status = "On" if group['notifications'] else "Off"
             keyboard.append([Button.inline(f'{group["title"]}:{status}', f'group_set_{group["id"]}')])
         
-        keyboard.append([Button.url("Click here to add to a group", url='https://telegram.me/@shfinancebot?startgroup=true')])
+        bot_name = 'testpaymanbot'
+        keyboard.append([Button.url("Click here to add to a group", url=f'https://t.me/{bot_name}?startgroup=true')])
         await self.tg_client.send_message(event.chat_id, "Set Group`s and Channel`s notifications:", buttons=keyboard)
 
     async def chat_handler(self, event):
@@ -393,14 +394,12 @@ class TGmainbot:
             await self.tg_client.send_message(event.chat_id, f"🤖 Hey hey, {user.first_name} , welcome on board!", buttons=keyboard)
         else:
             
-            permissions = await self.tg_client.get_permissions(event.chat_id, user.id)
-            if permissions.is_admin:
-                group = await self.tg_client.get_entity(event.message.peer_id)
-                group = group.to_dict()
-                group["user_id"] = user.id
-                group["notifications"] = True
-                self.profiles.find_one_and_replace({"user_id":user.id,"id":group["id"]},group,upsert=True)
-                await self.tg_client.send_message(event.chat_id, f"✅ ShortFinance bot has been successfully added!\n❗️To activate, open the bot, Main Menu➼Profiles➼ Open a Profile that you wish to use for that group➼Select ON near the group's name")
+            group = await self.tg_client.get_entity(event.message.peer_id)
+            group = group.to_dict()
+            group["user_id"] = user.id
+            group["notifications"] = True
+            self.profiles.find_one_and_replace({"user_id":user.id,"id":group["id"]},group,upsert=True)
+            await self.tg_client.send_message(event.chat_id, f"✅ ShortFinance bot has been successfully added!\n❗️To activate, open the bot, Main Menu➼Profiles➼ Open a Profile that you wish to use for that group➼Select ON near the group's name")
 
 
 if __name__ == '__main__':
