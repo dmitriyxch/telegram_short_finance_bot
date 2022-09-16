@@ -10,7 +10,7 @@ from pathlib import Path
 import json
 import time
 
-env_file = '.env' if os.path.isfile('.env') else 'bot.env'
+env_file = '../.env' if os.path.isfile('../.env') else 'bot.env'
 logger.info(f'env_file: {env_file}')
 dotenv_path = Path(env_file)
 load_dotenv(dotenv_path=dotenv_path)
