@@ -363,8 +363,7 @@ class TGmainbot:
             status = "On" if group['notifications'] else "Off"
             keyboard.append([Button.inline(f'{group["title"]}:{status}', f'group_set_{group["id"]}')])
         
-        bot_name = 'shfinancebot'
-        keyboard.append([Button.url("Click here to add to a group", url=f'https://t.me/{bot_name}?startgroup=true')])
+        keyboard.append([Button.url("Click here to add to a group", url=f'https://t.me/{os.getenv("TELEGRAM_BOT_NAME")}?startgroup=true')])
         await self.tg_client.send_message(event.chat_id, "Set Group`s and Channel`s notifications:", buttons=keyboard)
 
     async def chat_handler(self, event):
